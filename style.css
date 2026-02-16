@@ -1,88 +1,199 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { width:100%; height:100%; margin:0; padding:0; overflow:hidden; background:#000; font-family: system-ui, -apple-system, "Segoe UI", Tahoma, Arial; }
 
-#gameCanvas{
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+  font-family: "Press Start 2P", system-ui, sans-serif;
+}
+
+#gameCanvas {
   position: fixed;
   inset: 0;
   width: 100vw;
   height: 100vh;
-  display:block;
-  touch-action: none;
+  display: block;
 }
 
-#hud{
+/* HUD */
+#hud {
   position: fixed;
-  top: 14px;
-  left: 14px;
-  right: 14px;
-  display:flex;
-  justify-content: space-between;
-  align-items: center;
+  top: env(safe-area-inset-top, 0px);
+  left: 0;
+  right: 0;
   pointer-events: none;
-  z-index: 5;
+  display: grid;
+  place-items: start center;
+  padding-top: 10px;
 }
 
-#score{
-  pointer-events:none;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  color:#fff;
-  font-weight: 900;
-  font-size: 22px;
-  background: rgba(0,0,0,0.35);
-  backdrop-filter: blur(6px);
-}
-
-#soundBtn{
-  pointer-events: auto;
-  border: 0;
-  padding: 10px 12px;
-  border-radius: 12px;
-  font-size: 18px;
-  background: rgba(0,0,0,0.35);
+#score {
+  font-size: 44px;
+  line-height: 1;
   color: #fff;
-  backdrop-filter: blur(6px);
+  /* ستايل فلابي: حد أسود حول الرقم */
+  text-shadow:
+    -3px -3px 0 #000,
+     0px -3px 0 #000,
+     3px -3px 0 #000,
+    -3px  0px 0 #000,
+     3px  0px 0 #000,
+    -3px  3px 0 #000,
+     0px  3px 0 #000,
+     3px  3px 0 #000;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity .18s ease, transform .18s ease;
 }
 
-#overlay, #over{
+#score.on {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Screens */
+.screen {
   position: fixed;
   inset: 0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  z-index: 10;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 18px;
+  padding: 16px;
 }
 
-#over{ display:none; }
+.screen.show { display: flex; }
 
-.card{
-  width: min(92vw, 520px);
-  padding: 26px 22px;
-  border-radius: 22px;
-  text-align: center;
+.logoWrap { margin-top: 10vh; }
+
+.logo {
+  font-size: 34px;
+  color: #ffef8a;
+  letter-spacing: 1px;
+  text-shadow:
+    -4px -4px 0 #4b2a0f,
+     0px -4px 0 #4b2a0f,
+     4px -4px 0 #4b2a0f,
+    -4px  0px 0 #4b2a0f,
+     4px  0px 0 #4b2a0f,
+    -4px  4px 0 #4b2a0f,
+     0px  4px 0 #4b2a0f,
+     4px  4px 0 #4b2a0f;
+}
+
+/* زر ستارت نفس الروح */
+.btnStart {
+  font-family: "Press Start 2P", system-ui, sans-serif;
+  font-size: 18px;
+  padding: 14px 18px;
+  border: 4px solid #4b2a0f;
+  background: #f49a2a;
   color: #fff;
-  background: rgba(255,255,255,0.14);
-  border: 1px solid rgba(255,255,255,0.22);
-  box-shadow: 0 16px 40px rgba(0,0,0,0.25);
-  backdrop-filter: blur(10px);
+  border-radius: 10px;
+  box-shadow: 0 8px 0 rgba(0,0,0,.22);
 }
 
-.card h1{ margin:0 0 10px; font-size: 40px; font-weight: 900; }
-.card h2{ margin:0 0 10px; font-size: 34px; font-weight: 900; }
-.card p{ margin:0 0 14px; opacity: 0.95; }
-
-.card button{
-  border: 0;
-  padding: 10px 18px;
-  border-radius: 12px;
-  font-weight: 800;
-  background: rgba(255,255,255,0.22);
-  color:#fff;
+.btnStart:active {
+  transform: translateY(2px);
+  box-shadow: 0 6px 0 rgba(0,0,0,.22);
 }
 
-.hint{ margin-top: 12px; opacity: 0.85; font-size: 14px; }
-.hint2{ margin-top: 8px; opacity: 0.75; font-size: 12px; }
+/* Ready */
+.getReady {
+  margin-top: 8vh;
+  font-size: 26px;
+  color: #ffe38f;
+  text-shadow:
+    -4px -4px 0 #4b2a0f,
+     0px -4px 0 #4b2a0f,
+     4px -4px 0 #4b2a0f,
+    -4px  0px 0 #4b2a0f,
+     4px  0px 0 #4b2a0f,
+    -4px  4px 0 #4b2a0f,
+     0px  4px 0 #4b2a0f,
+     4px  4px 0 #4b2a0f;
+}
+
+.tapHint {
+  margin-top: 10px;
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  opacity: 0.95;
+}
+
+.tapArrow {
+  font-size: 40px;
+  color: #fff;
+  text-shadow:
+    -3px -3px 0 #000,
+     3px -3px 0 #000,
+    -3px  3px 0 #000,
+     3px  3px 0 #000;
+  animation: bob 0.8s ease-in-out infinite alternate;
+}
+
+.tapLabel {
+  font-size: 18px;
+  color: #fff;
+  text-shadow:
+    -3px -3px 0 #000,
+     3px -3px 0 #000,
+    -3px  3px 0 #000,
+     3px  3px 0 #000;
+}
+
+@keyframes bob {
+  from { transform: translateY(0); }
+  to { transform: translateY(8px); }
+}
+
+/* Game over */
+.gameOver {
+  margin-top: 10vh;
+  font-size: 26px;
+  color: #ffb1b1;
+  text-shadow:
+    -4px -4px 0 #4b2a0f,
+     0px -4px 0 #4b2a0f,
+     4px -4px 0 #4b2a0f,
+    -4px  0px 0 #4b2a0f,
+     4px  0px 0 #4b2a0f,
+    -4px  4px 0 #4b2a0f,
+     0px  4px 0 #4b2a0f,
+     4px  4px 0 #4b2a0f;
+}
+
+.panel {
+  width: min(420px, 90vw);
+  padding: 14px 16px;
+  border: 4px solid #4b2a0f;
+  background: rgba(255,255,255,0.75);
+  border-radius: 14px;
+  box-shadow: 0 10px 0 rgba(0,0,0,.18);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 10px 4px;
+}
+
+.lbl {
+  font-size: 14px;
+  color: #4b2a0f;
+}
+
+.val {
+  font-size: 22px;
+  color: #111;
+  text-shadow:
+    -2px -2px 0 #fff,
+     2px -2px 0 #fff,
+    -2px  2px 0 #fff,
+     2px  2px 0 #fff;
+}
