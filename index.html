@@ -2,39 +2,61 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Flappy Bird</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
 
+  <!-- Pixel font قريب من روح فلابي -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="./style.css" />
+</head>
+
+<body>
   <canvas id="gameCanvas"></canvas>
 
+  <!-- HUD (السكور فوق) -->
   <div id="hud">
     <div id="score">0</div>
-    <button id="soundBtn" aria-label="الصوت" title="الصوت">🔊</button>
   </div>
 
-  <!-- شاشة البداية -->
-  <div id="overlay">
-    <div class="card">
-      <h1>Flappy Bird</h1>
-      <p>اضغط/المس للقفز</p>
-      <button id="startBtn">ابدأ</button>
-      <div class="hint">عمودي للجوال — طائر بسيط</div>
-      <div class="hint2">⚠️ إذا ما اشتغل الصوت: اضغط زر 🔊</div>
+  <!-- Start Screen -->
+  <div id="screenStart" class="screen show">
+    <div class="logoWrap">
+      <div class="logo">Flappy Bird</div>
+    </div>
+
+    <button id="btnStart" class="btnStart">START</button>
+  </div>
+
+  <!-- Ready Screen (Get Ready + TAP) -->
+  <div id="screenReady" class="screen">
+    <div class="getReady">GET READY</div>
+    <div class="tapHint">
+      <div class="tapArrow">↑</div>
+      <div class="tapLabel">TAP</div>
     </div>
   </div>
 
-  <!-- شاشة النهاية -->
-  <div id="over">
-    <div class="card">
-      <h2>انتهت اللعبة</h2>
-      <p>نتيجتك: <span id="finalScore">0</span></p>
-      <button id="retryBtn">إعادة</button>
+  <!-- Game Over Screen -->
+  <div id="screenOver" class="screen">
+    <div class="gameOver">GAME OVER</div>
+
+    <div class="panel">
+      <div class="row">
+        <span class="lbl">SCORE</span>
+        <span id="finalScore" class="val">0</span>
+      </div>
+      <div class="row">
+        <span class="lbl">BEST</span>
+        <span id="bestScore" class="val">0</span>
+      </div>
     </div>
+
+    <button id="btnRetry" class="btnStart">RETRY</button>
   </div>
 
-  <script src="game.js" defer></script>
+  <script src="./game.js"></script>
 </body>
 </html>
