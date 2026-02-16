@@ -203,3 +203,6 @@ html,body{
   font-weight: 900;
   z-index: 9;
 }
+
+/* ===== التعديل الأخير فقط ===== */
+.medal.none{ display:none; }
