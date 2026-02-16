@@ -1,22 +1,39 @@
-<canvas id="gameCanvas"></canvas>
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Flappy Bird</title>
 
-<div id="hud">
-  <div id="score">0</div>
-</div>
+  <!-- مهم: لازم تكون روابط نسبية -->
+  <link rel="stylesheet" href="./style.css" />
+</head>
 
-<div id="overlay">
-  <div class="card">
-    <h1>Flappy Bird</h1>
-    <p>اضغط/المس للقفز</p>
-    <button id="startBtn">ابدأ</button>
-    <div class="hint">عمودي للجوال — طائر بسيط</div>
+<body>
+  <canvas id="gameCanvas"></canvas>
+
+  <div id="hud">
+    <div id="score">0</div>
   </div>
-</div>
 
-<div id="over">
-  <div class="card">
-    <h2>انتهت اللعبة</h2>
-    <p>نتيجتك: <span id="finalScore">0</span></p>
-    <button id="retryBtn">إعادة</button>
+  <div id="overlay">
+    <div class="card">
+      <h1>Flappy Bird</h1>
+      <p>اضغط/المس للقفز</p>
+      <button id="startBtn">ابدأ</button>
+      <div class="hint">عمودي للجوال — طائر بسيط</div>
+    </div>
   </div>
-</div>
+
+  <div id="over">
+    <div class="card">
+      <h2>انتهت اللعبة</h2>
+      <p>نتيجتك: <span id="finalScore">0</span></p>
+      <button id="retryBtn">إعادة</button>
+    </div>
+  </div>
+
+  <!-- مهم: نفس اسم ملفك بالضبط -->
+  <script src="./game.js" defer></script>
+</body>
+</html>
