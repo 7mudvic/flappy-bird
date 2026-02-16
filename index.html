@@ -16,7 +16,6 @@
 
     <!-- START -->
     <div id="startScreen" class="screen show">
-      <!-- ✅ الطير فوق اسم اللعبة بالمنتصف -->
       <div id="startBird" aria-hidden="true"></div>
 
       <div class="logoWrap">
@@ -25,8 +24,6 @@
       </div>
 
       <button id="startBtn" class="btn">START</button>
-
-      <!-- ❌ حذفنا: اضغط START ثم TAP للّعب -->
     </div>
 
     <!-- GET READY (لا تعديل) -->
@@ -37,6 +34,14 @@
         <div class="tapText">TAP</div>
       </div>
       <div class="hint">اضغط على الشاشة للقفز</div>
+    </div>
+
+    <!-- PAUSE (إضافة) -->
+    <div id="pauseScreen" class="screen">
+      <div class="pausePanel">
+        <div class="pauseTitle">PAUSED</div>
+        <button id="resumeBtn" class="btn">RESUME</button>
+      </div>
     </div>
 
     <!-- GAME OVER -->
@@ -64,12 +69,7 @@
         <button id="okBtn" class="btn">OK</button>
         <button id="shareBtn" class="btn ghost">SHARE</button>
       </div>
-
-      <!-- ❌ حذفنا: اضغط OK لإعادة اللعب -->
     </div>
-
-    <!-- ❌ حذفنا صندوق الصوت بالكامل -->
-    <!-- <div id="audioHint" class="audioHint">...</div> -->
   </div>
 
   <script src="game.js"></script>
