@@ -34,7 +34,8 @@ html,body{
 
 #ui button,
 #ui .btn,
-#ui .screen{
+#ui .screen,
+#ui input{
   pointer-events: auto;
 }
 
@@ -53,12 +54,11 @@ html,body{
 
 #startScreen.show,
 #readyScreen.show,
-#gameOverScreen.show,
-#pauseScreen.show{
+#gameOverScreen.show{
   display:flex !important;
 }
 
-/* ===== START ===== */
+/* ===== START SCREEN ===== */
 .logoWrap{
   width: min(92vw, 420px);
   padding: 18px 16px;
@@ -84,7 +84,7 @@ html,body{
   opacity: .95;
 }
 
-/* طير فوق اسم اللعبة */
+/* الطير فوق اسم اللعبة */
 #startBird{
   width: 58px;
   height: 42px;
@@ -114,13 +114,46 @@ html,body{
   border: 2px solid rgba(255,255,255,0.25);
 }
 
-.actions{
-  display:flex;
-  gap: 12px;
-  justify-content:center;
+.btn.mini{
+  padding: 10px 14px;
+  border-radius: 12px;
 }
 
-/* ===== READY ===== */
+.btn.wide{
+  width: 100%;
+}
+
+.startActions{
+  width: min(92vw, 420px);
+  display:flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.userBadge{
+  width: min(92vw, 420px);
+  color: rgba(255,255,255,0.9);
+  font-weight: 800;
+  text-shadow: 0 2px 0 rgba(0,0,0,0.35);
+  min-height: 20px;
+}
+
+/* زر الخيارات (فقط الرئيسية) */
+.optionsBtn{
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  border: 0;
+  background: rgba(255, 212, 77, 0.95);
+  font-weight: 900;
+  z-index: 10000;
+}
+
+/* ===== READY SCREEN ===== */
 .getReady{
   font-weight: 900;
   letter-spacing: 1px;
@@ -187,8 +220,6 @@ html,body{
   position: relative;
   image-rendering: pixelated;
   box-shadow: inset 0 6px 0 rgba(255,255,255,0.25), inset 0 -8px 0 rgba(0,0,0,0.18);
-  transform: scale(1);
-  animation: none;
 }
 
 .medal::before{
@@ -207,16 +238,6 @@ html,body{
 .medal.gold{ background: #f6c445; }
 .medal.platinum{ background: #8fe0ff; }
 
-/* pop animation (إضافة) */
-.medal.pop{
-  animation: pop .22s ease-out;
-}
-@keyframes pop{
-  0%{ transform: scale(0.65); }
-  60%{ transform: scale(1.12); }
-  100%{ transform: scale(1); }
-}
-
 .stats{ flex:1; }
 
 .row{
@@ -230,30 +251,16 @@ html,body{
 .k{ opacity:.85; }
 .v{ font-weight: 900; }
 
-/* ===== PAUSE ===== */
-.pausePanel{
-  width: min(92vw, 420px);
-  padding: 18px 16px;
-  border-radius: 18px;
-  background: var(--panel);
-  backdrop-filter: blur(10px);
-  color:#fff;
-  box-shadow: 0 15px 40px rgba(0,0,0,0.35);
-}
-.pauseTitle{
-  font-weight: 900;
-  letter-spacing: 1px;
-  font-size: 34px;
-  color: var(--gold);
-  text-shadow: 0 3px 0 var(--shadow);
-  margin-bottom: 12px;
+.actions{
+  display:flex;
+  gap: 12px;
+  justify-content:center;
 }
 
-/* ===== PAUSE BUTTON ===== */
-.pause{
+/* ===== HUD (فقط وقت اللعب) ===== */
+.hudBtn{
   position: fixed;
   top: 16px;
-  left: 16px;
   width: 46px;
   height: 46px;
   border-radius: 14px;
@@ -261,9 +268,132 @@ html,body{
   background: rgba(255, 212, 77, 0.95);
   font-weight: 900;
   z-index: 10000;
+  display: none;
 }
 
-/* REQUIRED HIDES */
+#pauseBtn{ left: 16px; }
+#homeBtn{ right: 16px; }
+
+/* ===== MODALS ===== */
+.modal{
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 20000;
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(6px);
+}
+.modal.show{ display:flex; }
+
+.modalCard{
+  width: min(92vw, 420px);
+  border-radius: 18px;
+  background: rgba(20, 35, 48, 0.92);
+  box-shadow: 0 15px 40px rgba(0,0,0,0.45);
+  color: #fff;
+  overflow: hidden;
+}
+
+.modalHeader{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  padding: 14px;
+  background: rgba(255,255,255,0.06);
+}
+
+.modalTitle{
+  font-weight: 900;
+  letter-spacing: .5px;
+}
+
+.xBtn{
+  border:0;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.14);
+  color:#fff;
+  font-weight: 900;
+  cursor:pointer;
+}
+
+.modalBody{
+  padding: 14px;
+  display:flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.divider{
+  height: 1px;
+  background: rgba(255,255,255,0.12);
+  margin: 6px 0;
+}
+
+.field{
+  display:flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: right;
+}
+
+.field span{
+  opacity: .9;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.field input{
+  border: 2px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.25);
+  color:#fff;
+  padding: 12px;
+  border-radius: 14px;
+  outline: none;
+  font-size: 16px;
+}
+
+.msg{
+  min-height: 18px;
+  font-weight: 800;
+  opacity: .95;
+}
+
+.privacyText p{
+  margin: 0 0 10px 0;
+  line-height: 1.6;
+  opacity: .95;
+}
+
+/* Leaderboard */
+.lbHint{
+  font-weight: 800;
+  opacity: .9;
+  margin-bottom: 6px;
+}
+.lbList{
+  display:flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lbRow{
+  display:flex;
+  justify-content: space-between;
+  align-items:center;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.08);
+  font-weight: 900;
+}
+.lbRank{ opacity:.9; min-width: 40px; text-align: start; }
+.lbUser{ flex:1; text-align: start; padding: 0 8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.lbScore{ min-width: 50px; text-align:end; color: var(--gold); }
+
+/* ===== REQUIRED HIDES (حسب طلبك) ===== */
 .hint{ display:none !important; }
 #audioHint{ display:none !important; }
 .audioHint{ display:none !important; }
