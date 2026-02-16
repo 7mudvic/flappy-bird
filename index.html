@@ -1,62 +1,71 @@
 <!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="ar">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Flappy Bird</title>
-
-  <!-- Pixel font قريب من روح فلابي -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-
-  <link rel="stylesheet" href="./style.css" />
+  <title>Flappy Style</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
   <canvas id="gameCanvas"></canvas>
 
-  <!-- HUD (السكور فوق) -->
-  <div id="hud">
-    <div id="score">0</div>
-  </div>
+  <!-- UI -->
+  <div id="ui">
+    <button id="pauseBtn" class="pause" aria-label="Pause">II</button>
 
-  <!-- Start Screen -->
-  <div id="screenStart" class="screen show">
-    <div class="logoWrap">
-      <div class="logo">Flappy Bird</div>
-    </div>
-
-    <button id="btnStart" class="btnStart">START</button>
-  </div>
-
-  <!-- Ready Screen (Get Ready + TAP) -->
-  <div id="screenReady" class="screen">
-    <div class="getReady">GET READY</div>
-    <div class="tapHint">
-      <div class="tapArrow">↑</div>
-      <div class="tapLabel">TAP</div>
-    </div>
-  </div>
-
-  <!-- Game Over Screen -->
-  <div id="screenOver" class="screen">
-    <div class="gameOver">GAME OVER</div>
-
-    <div class="panel">
-      <div class="row">
-        <span class="lbl">SCORE</span>
-        <span id="finalScore" class="val">0</span>
+    <!-- START -->
+    <div id="startScreen" class="screen show">
+      <div class="logoWrap">
+        <div class="pixelTitle">FLAPPY BIRD</div>
+        <div class="pixelSubtitle">START</div>
       </div>
-      <div class="row">
-        <span class="lbl">BEST</span>
-        <span id="bestScore" class="val">0</span>
-      </div>
+      <button id="startBtn" class="btn">START</button>
+      <div class="hint">اضغط START ثم TAP للّعب</div>
     </div>
 
-    <button id="btnRetry" class="btnStart">RETRY</button>
+    <!-- GET READY -->
+    <div id="readyScreen" class="screen">
+      <div class="getReady">GET READY</div>
+      <div class="tapWrap">
+        <div class="tapArrow">↑</div>
+        <div class="tapText">TAP</div>
+      </div>
+      <div class="hint">اضغط على الشاشة للقفز</div>
+    </div>
+
+    <!-- GAME OVER -->
+    <div id="gameOverScreen" class="screen">
+      <div class="gameOver">GAME OVER</div>
+
+      <div class="board">
+        <div class="medalBox">
+          <div id="medal" class="medal none" title="Medal"></div>
+        </div>
+
+        <div class="stats">
+          <div class="row">
+            <div class="k">SCORE</div>
+            <div class="v" id="finalScore">0</div>
+          </div>
+          <div class="row">
+            <div class="k">BEST</div>
+            <div class="v" id="bestScore">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="okBtn" class="btn">OK</button>
+        <button id="shareBtn" class="btn ghost">SHARE</button>
+      </div>
+
+      <div class="hint">اضغط OK لإعادة اللعب</div>
+    </div>
+
+    <div id="audioHint" class="audioHint">🔊 إذا ما اشتغل الصوت: اضغط START ثم TAP داخل اللعبة</div>
   </div>
 
-  <script src="./game.js"></script>
+  <script src="game.js"></script>
 </body>
 </html>
