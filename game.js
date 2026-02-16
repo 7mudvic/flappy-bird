@@ -6,11 +6,13 @@ const ctx = canvas.getContext('2d', { alpha: false });
 const startScreen = document.getElementById('startScreen');
 const readyScreen = document.getElementById('readyScreen');
 const gameOverScreen = document.getElementById('gameOverScreen');
+const pauseScreen = document.getElementById('pauseScreen');
 const pauseBtn = document.getElementById('pauseBtn');
 
 const startBtn = document.getElementById('startBtn');
 const okBtn = document.getElementById('okBtn');
 const shareBtn = document.getElementById('shareBtn');
+const resumeBtn = document.getElementById('resumeBtn');
 
 const finalScoreEl = document.getElementById('finalScore');
 const bestScoreEl = document.getElementById('bestScore');
@@ -18,7 +20,6 @@ const medalEl = document.getElementById('medal');
 
 let W = 0, H = 0, DPR = 1;
 
-// منع سحب الصفحة بالجوال (داخل اللعبة)
 document.addEventListener('touchmove', (e) => e.preventDefault(), { passive:false });
 
 function fitCanvas(){
@@ -38,7 +39,7 @@ window.addEventListener('resize', fitCanvas);
 // GAME SETTINGS (سلسة ومتوسطة)
 // =====================
 const GRAVITY = 0.42;
-const JUMP_V = -5.7;          // نقزة أقل (سلسة)
+const JUMP_V = -5.7;
 const PIPE_W = 78;
 const PIPE_SPACING = 280;
 const GAP_START = 200;
@@ -47,12 +48,7 @@ const FLOOR_H = 110;
 let speed = 3.2;
 let gap = GAP_START;
 
-const bird = {
-  x: 0, y: 0,
-  vy: 0,
-  r: 14,
-  rot: 0,         // rotation
-};
+const bird = { x:0, y:0, vy:0, r:14, rot:0 };
 
 let pipes = [];
 let score = 0;
@@ -61,12 +57,21 @@ let bestScore = Number(localStorage.getItem('bestScore') || 0);
 let state = 'start'; // start | ready | play | over
 let paused = false;
 
-// camera shake
+// shake + flash (إضافة)
 let shakeT = 0;
 let shakePower = 0;
+let flashT = 0;
+
+// score spark (إضافة)
+let sparkT = 0;
+
+// count-up (إضافة)
+let countFrom = 0;
+let countTo = 0;
+let countT = 0;
 
 // =====================
-// AUDIO (قريب ومريح)
+// AUDIO (أقرب + أنعم)
 // =====================
 let audioCtx = null;
 let masterGain = null;
@@ -99,10 +104,11 @@ function tone(freq, dur, type='square', vol=0.22){
   o.stop(t + dur);
 }
 
-function sStart(){ tone(659, 0.08, 'square', 0.20); tone(880, 0.10, 'square', 0.16); }
-function sFlap(){ tone(740, 0.06, 'square', 0.18); }
-function sScore(){ tone(988, 0.08, 'square', 0.16); tone(1319, 0.08, 'square', 0.10); }
-function sHit(){ tone(220, 0.20, 'sawtooth', 0.22); tone(140, 0.26, 'sawtooth', 0.16); }
+// أصوات أنعم شوي (إضافة تحسين)
+function sStart(){ tone(660, 0.08, 'square', 0.18); tone(880, 0.10, 'square', 0.14); }
+function sFlap(){ tone(760, 0.05, 'square', 0.16); }
+function sScore(){ tone(990, 0.06, 'square', 0.14); tone(1320, 0.06, 'square', 0.10); }
+function sHit(){ tone(220, 0.18, 'sawtooth', 0.20); tone(140, 0.24, 'sawtooth', 0.14); }
 
 // =====================
 // UI helpers
@@ -111,13 +117,15 @@ function showScreen(which){
   startScreen.classList.remove('show');
   readyScreen.classList.remove('show');
   gameOverScreen.classList.remove('show');
+  pauseScreen.classList.remove('show');
 
   if (which === 'start') startScreen.classList.add('show');
   if (which === 'ready') readyScreen.classList.add('show');
   if (which === 'over') gameOverScreen.classList.add('show');
+  if (which === 'pause') pauseScreen.classList.add('show');
 }
 
-// ✅ ميداليات أصعب + ترتيبك (white ثم silver ثم bronze ثم gold ثم ...)
+// ميداليات أصعب (كما طلبت)
 function setMedal(s){
   medalEl.className = 'medal none';
   if (s >= 15) medalEl.className = 'medal white';
@@ -125,10 +133,16 @@ function setMedal(s){
   if (s >= 45) medalEl.className = 'medal bronze';
   if (s >= 60) medalEl.className = 'medal gold';
   if (s >= 80) medalEl.className = 'medal platinum';
+
+  // pop animation (إضافة)
+  if (!medalEl.classList.contains('none')){
+    medalEl.classList.add('pop');
+    setTimeout(()=> medalEl.classList.remove('pop'), 260);
+  }
 }
 
 // =====================
-// DIGIT FONT (Pixel-like) رسم داخل الكانفاس
+// DIGIT FONT (Pixel-like)
 // =====================
 const DIG = {
   '0': ["111","101","101","101","111"],
@@ -147,7 +161,6 @@ function drawDigit(d, x, y, scale, fill, stroke){
   const map = DIG[d];
   if (!map) return 0;
   const px = scale;
-  const w = 3 * px;
 
   ctx.fillStyle = stroke;
   for (let r=0;r<5;r++){
@@ -167,30 +180,38 @@ function drawDigit(d, x, y, scale, fill, stroke){
     }
   }
 
-  return w;
+  return 3 * px;
 }
 
 function drawScoreNumber(numStr, centerX, topY){
   const scale = Math.max(6, Math.floor(W / 70));
-  const gap = Math.floor(scale * 0.8);
+  const gap2 = Math.floor(scale * 0.8);
 
   let totalW = 0;
-  for (const ch of numStr){
-    totalW += 3*scale + gap;
-  }
-  totalW -= gap;
+  for (const ch of numStr) totalW += 3*scale + gap2;
+  totalW -= gap2;
 
   let x = Math.floor(centerX - totalW/2);
   const y = topY;
 
   for (const ch of numStr){
     drawDigit(ch, x, y, scale, '#ffffff', '#111111');
-    x += 3*scale + gap;
+    x += 3*scale + gap2;
+  }
+
+  // spark (إضافة)
+  if (sparkT > 0){
+    const a = Math.min(1, sparkT/10);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(centerX + totalW/2 + 8, y + 6, 6, 6);
+    ctx.fillRect(centerX + totalW/2 + 18, y + 16, 4, 4);
+    ctx.globalAlpha = 1;
   }
 }
 
 // =====================
-// BACKGROUND (مغرب/ليل ثابت)
+// BACKGROUND (ثابت)
 // =====================
 const stars = [];
 function initStars(){
@@ -221,11 +242,16 @@ function drawCloud(cx, cy, s){
   ctx.fill();
 }
 
+// day/night cycle بسيط جدًا (إضافة بدون تخريب)
+// كل 10 نقاط يغمّق/يفتح شوي
 function drawBackground(){
+  const phase = Math.floor(score / 10) % 2; // 0/1
+  const mix = phase ? 0.18 : 0.0;          // درجة بسيطة فقط
+
   const g = ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,"#0a1a2a");
-  g.addColorStop(0.55,"#0f3d5a");
-  g.addColorStop(1,"#77c7e9");
+  g.addColorStop(0, mix ? "#061320" : "#0a1a2a");
+  g.addColorStop(0.55, mix ? "#0b2f46" : "#0f3d5a");
+  g.addColorStop(1, "#77c7e9");
   ctx.fillStyle = g;
   ctx.fillRect(0,0,W,H);
 
@@ -270,7 +296,7 @@ function drawBackground(){
 }
 
 // =====================
-// PIPES (ستايل قريب)
+// PIPES
 // =====================
 function pipeBody(x,y,w,h){
   const g = ctx.createLinearGradient(x,0,x+w,0);
@@ -321,11 +347,11 @@ function drawPipes(){
 }
 
 // =====================
-// BIRD (Pixel orange/red + tilt)
+// BIRD
 // =====================
 function drawBird(){
   const targetRot = Math.max(-0.45, Math.min(1.2, bird.vy * 0.06));
-  bird.rot += (targetRot - bird.rot) * 0.15;
+  bird.rot += (targetRot - bird.rot) * 0.13;
 
   ctx.save();
   ctx.translate(bird.x, bird.y);
@@ -378,9 +404,14 @@ function reset(){
 
   shakeT = 0;
   shakePower = 0;
-  paused = false;
+  flashT = 0;
+  sparkT = 0;
 
+  paused = false;
   pauseBtn.textContent = 'II';
+
+  // reset count-up
+  countFrom = 0; countTo = 0; countT = 0;
 }
 
 function rectsOverlap(ax,ay,aw,ah,bx,by,bw,bh){
@@ -439,6 +470,36 @@ function toPlay(){
   sStart();
 }
 
+function toPause(){
+  if (state !== 'play') return;
+  paused = true;
+  showScreen('pause');
+  pauseBtn.textContent = '▶';
+}
+
+function toResume(){
+  if (state !== 'play') return;
+  paused = false;
+  showScreen(null);
+  pauseBtn.textContent = 'II';
+}
+
+function startCountUp(n){
+  countFrom = 0;
+  countTo = n;
+  countT = 0;
+  finalScoreEl.textContent = "0";
+}
+
+function tickCountUp(){
+  if (countFrom >= countTo) return;
+  // سرعة عد مناسبة
+  countT++;
+  const step = Math.max(1, Math.floor(countTo / 25));
+  countFrom = Math.min(countTo, countFrom + step);
+  finalScoreEl.textContent = String(countFrom);
+}
+
 function toOver(){
   state = 'over';
   showScreen('over');
@@ -448,21 +509,32 @@ function toOver(){
     localStorage.setItem('bestScore', String(bestScore));
   }
 
-  finalScoreEl.textContent = String(score);
   bestScoreEl.textContent = String(bestScore);
 
   setMedal(score);
 
+  // Count-up (إضافة)
+  startCountUp(score);
+
+  // flash + shake + hit sound (إضافة)
   shakeT = 18;
   shakePower = 10;
+  flashT = 10;
   sHit();
 }
 
 pauseBtn.addEventListener('click', (e)=>{
   e.preventDefault();
   if (state !== 'play') return;
-  paused = !paused;
-  pauseBtn.textContent = paused ? '▶' : 'II';
+  initAudio();
+  if (!paused) toPause();
+  else toResume();
+});
+
+resumeBtn.addEventListener('click', (e)=>{
+  e.preventDefault();
+  initAudio();
+  toResume();
 });
 
 startBtn.addEventListener('click', (e)=>{
@@ -480,6 +552,22 @@ okBtn.addEventListener('click', (e)=>{
 shareBtn.addEventListener('click', async (e)=>{
   e.preventDefault();
   const text = `سجلت ${score} في اللعبة!`;
+
+  try{
+    // حاول مشاركة صورة
+    if (navigator.share && canvas.toBlob){
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/png', 0.95));
+      if (blob){
+        const file = new File([blob], 'score.png', { type:'image/png' });
+        // بعض الأجهزة لازم canShare
+        if (navigator.canShare && navigator.canShare({ files:[file] })){
+          await navigator.share({ files:[file], text });
+          return;
+        }
+      }
+    }
+  }catch{}
+
   try{
     if (navigator.share) await navigator.share({ text });
   }catch{}
@@ -506,8 +594,9 @@ window.addEventListener('keydown', (e)=>{
   }
   if (e.code === 'KeyP'){
     if (state === 'play'){
-      paused = !paused;
-      pauseBtn.textContent = paused ? '▶' : 'II';
+      initAudio();
+      if (!paused) toPause();
+      else toResume();
     }
   }
 });
@@ -518,6 +607,7 @@ window.addEventListener('keydown', (e)=>{
 function step(){
   ctx.save();
 
+  // shake
   if (shakeT > 0){
     const dx = (Math.random()*2 - 1) * shakePower;
     const dy = (Math.random()*2 - 1) * shakePower;
@@ -530,16 +620,35 @@ function step(){
   drawPipes();
   drawBird();
 
+  // score
   if (state === 'play' || state === 'over'){
     drawScoreNumber(String(score), W/2, Math.max(22, H*0.06));
   }
-
   if (state === 'ready'){
     drawScoreNumber("0", W/2, Math.max(22, H*0.06));
   }
 
+  // flash overlay (إضافة)
+  if (flashT > 0){
+    const a = Math.min(0.35, flashT/12);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0,0,W,H);
+    ctx.globalAlpha = 1;
+    flashT--;
+  }
+
   ctx.restore();
 
+  // count-up in Game Over (إضافة)
+  if (state === 'over'){
+    tickCountUp();
+  }
+
+  // spark fade
+  if (sparkT > 0) sparkT--;
+
+  // update
   if (state === 'play' && !paused){
     bird.vy += GRAVITY;
     bird.y += bird.vy;
@@ -552,6 +661,7 @@ function step(){
       if (!p.passed && p.x + PIPE_W < bird.x - bird.r){
         p.passed = true;
         score++;
+        sparkT = 10;   // spark on score (إضافة)
         sScore();
       }
     }
