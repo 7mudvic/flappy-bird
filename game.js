@@ -7,31 +7,46 @@ const over = document.getElementById("over");
 const retryBtn = document.getElementById("retryBtn");
 const scoreEl = document.getElementById("score");
 const finalScoreEl = document.getElementById("finalScore");
+const soundBtn = document.getElementById("soundBtn");
 
 // منع سحب الصفحة بالجوال
-document.addEventListener("touchmove", (e) => e.preventDefault(), { passive:false });
+document.addEventListener("touchmove", (e) => e.preventDefault(), { passive: false });
 
 // =====================
-// SOUND (simple beeps)
+// SOUND (works on iPhone)
 // =====================
 let audioCtx = null;
+let soundEnabled = true;
 
-function initAudio() {
+function getAudioCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioCtx.state === "suspended") audioCtx.resume();
+  return audioCtx;
 }
 
-function beep(freq, dur, type="square", vol=0.18) {
-  if (!audioCtx) return;
-  const o = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
+// لازم ننادي resume داخل "Gesture" (لمسة/ضغط) عشان iOS يسمح بالصوت
+async function unlockAudio() {
+  if (!soundEnabled) return;
+  try {
+    const ac = getAudioCtx();
+    if (ac.state === "suspended") await ac.resume();
+  } catch (_) {}
+}
+
+function beep(freq, dur, type = "square", vol = 0.18) {
+  if (!soundEnabled) return;
+  const ac = getAudioCtx();
+  if (ac.state !== "running") return;
+
+  const o = ac.createOscillator();
+  const g = ac.createGain();
+
   o.type = type;
   o.frequency.value = freq;
 
   o.connect(g);
-  g.connect(audioCtx.destination);
+  g.connect(ac.destination);
 
-  const t = audioCtx.currentTime;
+  const t = ac.currentTime;
   g.gain.setValueAtTime(vol, t);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
 
@@ -39,19 +54,31 @@ function beep(freq, dur, type="square", vol=0.18) {
   o.stop(t + dur);
 }
 
-function sStart(){ beep(520, 0.10, "square", 0.16); beep(660, 0.12, "square", 0.14); }
-function sFlap(){ beep(740, 0.08, "square", 0.16); }
-function sScore(){ beep(980, 0.10, "square", 0.14); }
-function sHit(){ beep(220, 0.22, "sawtooth", 0.18); beep(140, 0.28, "sawtooth", 0.14); }
+function sStart() { beep(520, 0.10, "square", 0.16); beep(660, 0.12, "square", 0.14); }
+function sFlap()  { beep(740, 0.08, "square", 0.16); }
+function sScore() { beep(980, 0.10, "square", 0.14); }
+function sHit()   { beep(220, 0.22, "sawtooth", 0.18); beep(140, 0.28, "sawtooth", 0.14); }
+
+// زر كتم/تشغيل
+soundBtn.addEventListener("click", async (e) => {
+  e.preventDefault();
+  soundEnabled = !soundEnabled;
+  soundBtn.textContent = soundEnabled ? "🔊" : "🔇";
+  if (soundEnabled) {
+    await unlockAudio();
+    // نغمة صغيرة للتأكيد
+    beep(880, 0.08, "square", 0.12);
+  }
+}, { passive: false });
 
 // =====================
 // Canvas fit (fullscreen)
 // =====================
 function fitCanvas() {
   const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-  canvas.width  = Math.floor(window.innerWidth * dpr);
+  canvas.width = Math.floor(window.innerWidth * dpr);
   canvas.height = Math.floor(window.innerHeight * dpr);
-  ctx.setTransform(1,0,0,1,0,0);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.scale(dpr, dpr);
 }
 fitCanvas();
@@ -76,9 +103,9 @@ let score = 0;
 let running = false;
 let dead = false;
 
-function rand(min, max){ return Math.random() * (max-min) + min; }
+function rand(min, max) { return Math.random() * (max - min) + min; }
 
-function reset(){
+function reset() {
   const W = window.innerWidth;
   const H = window.innerHeight;
 
@@ -104,17 +131,17 @@ function reset(){
   overlay.style.display = "flex";
 }
 
-function startGame(){
+async function startGame() {
   overlay.style.display = "none";
   over.style.display = "none";
   running = true;
   dead = false;
 
-  initAudio();
+  await unlockAudio();   // ✅ فتح الصوت بعد لمسة
   sStart();
 }
 
-function endGame(){
+function endGame() {
   dead = true;
   running = false;
   finalScoreEl.textContent = String(score);
@@ -123,90 +150,92 @@ function endGame(){
 }
 
 // أزرار
-startBtn.addEventListener("click", (e) => { e.preventDefault(); reset(); startGame(); });
-retryBtn.addEventListener("click", (e) => { e.preventDefault(); reset(); startGame(); });
+startBtn.addEventListener("click", async (e) => { e.preventDefault(); reset(); await startGame(); }, { passive:false });
+retryBtn.addEventListener("click", async (e) => { e.preventDefault(); reset(); await startGame(); }, { passive:false });
 
 // لمس على شاشة البداية يبدأ
-overlay.addEventListener("pointerdown", (e) => { e.preventDefault(); reset(); startGame(); });
+overlay.addEventListener("pointerdown", async (e) => { e.preventDefault(); reset(); await startGame(); }, { passive:false });
 
-function flap(){
+async function flap() {
   if (!running || dead) return;
-  initAudio();
+  await unlockAudio();   // ✅ مهم للآيفون (كل قفزة إذا كان الصوت مقفول)
   bird.vy = JUMP;
   sFlap();
 }
 
 // لمس/ضغط للقفز أثناء اللعب
 window.addEventListener("pointerdown", (e) => {
+  // إذا overlay/over مقفلة = داخل اللعب
   if (overlay.style.display === "none" && over.style.display === "none") {
     e.preventDefault();
     flap();
   }
-}, { passive:false });
+}, { passive: false });
 
 window.addEventListener("keydown", (e) => {
   if (e.code === "Space" || e.code === "ArrowUp") flap();
 });
 
 // ===== Pipes =====
-function spawnPipe(x){
+function spawnPipe(x) {
   const H = window.innerHeight;
   const topMin = 70;
   const topMax = H - FLOOR_H - gap - 130;
   const topH = Math.floor(rand(topMin, topMax));
-  pipes.push({ x, topH, passed:false });
+  pipes.push({ x, topH, passed: false });
 }
 
-function updateDifficulty(){
+function updateDifficulty() {
   const level = Math.floor(score / 5);
   speed = 3.35 + level * 0.35;
   gap = GAP_START - Math.min(level * 10, 70);
 }
 
 // ===== رسم الخلفية =====
-function drawBackground(){
+function drawBackground() {
   const W = window.innerWidth;
   const H = window.innerHeight;
 
-  const sky = ctx.createLinearGradient(0,0,0,H);
-  sky.addColorStop(0,"#6ec9ff");
-  sky.addColorStop(1,"#a9e6ff");
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, "#6ec9ff");
+  sky.addColorStop(1, "#a9e6ff");
   ctx.fillStyle = sky;
-  ctx.fillRect(0,0,W,H);
+  ctx.fillRect(0, 0, W, H);
 
+  // مباني خفيفة
   ctx.fillStyle = "rgba(0,0,0,0.08)";
   const baseY = H - FLOOR_H - 120;
-  for(let i=0;i<18;i++){
-    const bw = 30 + (i*13)%50;
-    const bh = 40 + (i*23)%80;
-    const x = (i*55)%(W+60) - 30;
-    ctx.fillRect(x, baseY-bh, bw, bh);
+  for (let i = 0; i < 18; i++) {
+    const bw = 30 + (i * 13) % 50;
+    const bh = 40 + (i * 23) % 80;
+    const x = (i * 55) % (W + 60) - 30;
+    ctx.fillRect(x, baseY - bh, bw, bh);
   }
 
-  function cloud(cx,cy,s){
-    ctx.fillStyle="rgba(255,255,255,0.85)";
+  // سحب
+  function cloud(cx, cy, s) {
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
     ctx.beginPath();
-    ctx.arc(cx-30*s, cy, 18*s, 0, Math.PI*2);
-    ctx.arc(cx, cy-8*s, 26*s, 0, Math.PI*2);
-    ctx.arc(cx+30*s, cy, 20*s, 0, Math.PI*2);
+    ctx.arc(cx - 30 * s, cy, 18 * s, 0, Math.PI * 2);
+    ctx.arc(cx, cy - 8 * s, 26 * s, 0, Math.PI * 2);
+    ctx.arc(cx + 30 * s, cy, 20 * s, 0, Math.PI * 2);
     ctx.fill();
   }
-  cloud(W*0.25, H*0.25, 1.0);
-  cloud(W*0.70, H*0.18, 0.9);
+  cloud(W * 0.25, H * 0.25, 1.0);
+  cloud(W * 0.70, H * 0.18, 0.9);
 
+  // أرض
   const groundY = H - FLOOR_H;
-  ctx.fillStyle="#d9d39c";
+  ctx.fillStyle = "#d9d39c";
   ctx.fillRect(0, groundY, W, FLOOR_H);
-  ctx.fillStyle="#4bb648";
+  ctx.fillStyle = "#4bb648";
   ctx.fillRect(0, groundY, W, 18);
 
-  ctx.fillStyle="rgba(0,0,0,0.12)";
-  for(let x=0;x<W;x+=18){
-    ctx.fillRect(x, groundY+8, 10, 6);
-  }
+  ctx.fillStyle = "rgba(0,0,0,0.12)";
+  for (let x = 0; x < W; x += 18) ctx.fillRect(x, groundY + 8, 10, 6);
 
-  ctx.strokeStyle="rgba(0,0,0,0.20)";
-  ctx.lineWidth=2;
+  ctx.strokeStyle = "rgba(0,0,0,0.20)";
+  ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(0, groundY);
   ctx.lineTo(W, groundY);
@@ -214,49 +243,47 @@ function drawBackground(){
 }
 
 // ===== رسم المواسير =====
-function drawPipes(){
+function drawPipes() {
   const H = window.innerHeight;
 
-  function pipeBody(x,y,w,h){
-    const g = ctx.createLinearGradient(x,0,x+w,0);
-    g.addColorStop(0,"#1f8f3a");
-    g.addColorStop(0.35,"#49d06b");
-    g.addColorStop(1,"#157a2f");
-    ctx.fillStyle=g;
-    ctx.fillRect(x,y,w,h);
+  function pipeBody(x, y, w, h) {
+    const g = ctx.createLinearGradient(x, 0, x + w, 0);
+    g.addColorStop(0, "#1f8f3a");
+    g.addColorStop(0.35, "#49d06b");
+    g.addColorStop(1, "#157a2f");
+    ctx.fillStyle = g;
+    ctx.fillRect(x, y, w, h);
 
-    ctx.fillStyle="rgba(255,255,255,0.10)";
-    ctx.fillRect(x+w*0.18,y,w*0.10,h);
-    ctx.fillRect(x+w*0.62,y,w*0.08,h);
+    ctx.fillStyle = "rgba(255,255,255,0.10)";
+    ctx.fillRect(x + w * 0.18, y, w * 0.10, h);
+    ctx.fillRect(x + w * 0.62, y, w * 0.08, h);
 
-    ctx.strokeStyle="rgba(0,0,0,0.35)";
-    ctx.lineWidth=2;
-    ctx.strokeRect(x,y,w,h);
+    ctx.strokeStyle = "rgba(0,0,0,0.35)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, w, h);
   }
 
-  function pipeCap(x,y,w,h){
-    const capW = w+14;
-    const capX = x-7;
+  function pipeCap(x, y, w, h) {
+    const capW = w + 14;
+    const capX = x - 7;
+    const g = ctx.createLinearGradient(capX, 0, capX + capW, 0);
+    g.addColorStop(0, "#1b8234");
+    g.addColorStop(0.35, "#55e07a");
+    g.addColorStop(1, "#136b2a");
+    ctx.fillStyle = g;
+    ctx.fillRect(capX, y, capW, h);
 
-    const g = ctx.createLinearGradient(capX,0,capX+capW,0);
-    g.addColorStop(0,"#1b8234");
-    g.addColorStop(0.35,"#55e07a");
-    g.addColorStop(1,"#136b2a");
+    ctx.strokeStyle = "rgba(0,0,0,0.35)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(capX, y, capW, h);
 
-    ctx.fillStyle=g;
-    ctx.fillRect(capX,y,capW,h);
-
-    ctx.strokeStyle="rgba(0,0,0,0.35)";
-    ctx.lineWidth=2;
-    ctx.strokeRect(capX,y,capW,h);
-
-    ctx.fillStyle="rgba(255,255,255,0.12)";
-    ctx.fillRect(capX+6,y+4,capW-12,4);
+    ctx.fillStyle = "rgba(255,255,255,0.12)";
+    ctx.fillRect(capX + 6, y + 4, capW - 12, 4);
   }
 
-  for(const p of pipes){
+  for (const p of pipes) {
     pipeBody(p.x, 0, PIPE_W, p.topH);
-    pipeCap(p.x, p.topH-18, PIPE_W, 18);
+    pipeCap(p.x, p.topH - 18, PIPE_W, 18);
 
     const bottomY = p.topH + gap;
     const bottomH = (H - FLOOR_H) - bottomY;
@@ -266,7 +293,7 @@ function drawPipes(){
 }
 
 // ===== رسم الطائر =====
-function drawBird(){
+function drawBird() {
   bird.wing += 0.18;
   const flapY = Math.sin(bird.wing) * 6;
 
@@ -276,7 +303,7 @@ function drawBird(){
   // جسم
   ctx.fillStyle = "#ffd34d";
   ctx.beginPath();
-  ctx.arc(x, y, bird.r, 0, Math.PI*2);
+  ctx.arc(x, y, bird.r, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.strokeStyle = "rgba(0,0,0,0.25)";
@@ -286,85 +313,85 @@ function drawBird(){
   // جناح
   ctx.fillStyle = "#ffb703";
   ctx.beginPath();
-  ctx.ellipse(x-6, y+3, 12, 8, -0.6, 0, Math.PI*2);
+  ctx.ellipse(x - 6, y + 3, 12, 8, -0.6, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.strokeStyle = "rgba(0,0,0,0.18)";
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(x-12, y+3);
-  ctx.quadraticCurveTo(x-6, y+3+flapY, x+2, y+6);
+  ctx.moveTo(x - 12, y + 3);
+  ctx.quadraticCurveTo(x - 6, y + 3 + flapY, x + 2, y + 6);
   ctx.stroke();
 
   // عين
-  ctx.fillStyle="#111";
+  ctx.fillStyle = "#111";
   ctx.beginPath();
-  ctx.arc(x+6, y-4, 2.6, 0, Math.PI*2);
+  ctx.arc(x + 6, y - 4, 2.6, 0, Math.PI * 2);
   ctx.fill();
 
   // منقار
-  ctx.fillStyle="#ff7b00";
+  ctx.fillStyle = "#ff7b00";
   ctx.beginPath();
-  ctx.moveTo(x+16, y);
-  ctx.lineTo(x+26, y+4);
-  ctx.lineTo(x+16, y+8);
+  ctx.moveTo(x + 16, y);
+  ctx.lineTo(x + 26, y + 4);
+  ctx.lineTo(x + 16, y + 8);
   ctx.closePath();
   ctx.fill();
 }
 
 // ===== زر Play داخل اللعبة (قبل البدء) =====
-function drawPlayButton(){
+function drawPlayButton() {
   const W = window.innerWidth;
   const H = window.innerHeight;
 
   const box = 92;
-  const x = (W-box)/2;
-  const y = H*0.55 - box/2;
+  const x = (W - box) / 2;
+  const y = H * 0.55 - box / 2;
 
-  ctx.fillStyle="rgba(0,0,0,0.18)";
-  ctx.fillRect(x,y,box,box);
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
+  ctx.fillRect(x, y, box, box);
 
-  ctx.strokeStyle="rgba(255,255,255,0.35)";
-  ctx.lineWidth=2;
-  ctx.strokeRect(x,y,box,box);
+  ctx.strokeStyle = "rgba(255,255,255,0.35)";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x, y, box, box);
 
-  ctx.fillStyle="#ffb03b";
+  ctx.fillStyle = "#ffb03b";
   ctx.beginPath();
-  ctx.moveTo(x+box*0.40, y+box*0.30);
-  ctx.lineTo(x+box*0.40, y+box*0.70);
-  ctx.lineTo(x+box*0.72, y+box*0.50);
+  ctx.moveTo(x + box * 0.40, y + box * 0.30);
+  ctx.lineTo(x + box * 0.40, y + box * 0.70);
+  ctx.lineTo(x + box * 0.72, y + box * 0.50);
   ctx.closePath();
   ctx.fill();
 }
 
 // ===== تصادم =====
-function rectsOverlap(ax,ay,aw,ah,bx,by,bw,bh){
-  return ax<bx+bw && ax+aw>bx && ay<by+bh && ay+ah>by;
+function rectsOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
+  return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
 }
 
-function hit(){
+function hit() {
   const H = window.innerHeight;
   const r = bird.r;
 
   const bx = bird.x - r;
   const by = bird.y - r;
-  const bs = r*2;
+  const bs = r * 2;
 
   if (by <= 0) return true;
   if (by + bs >= H - FLOOR_H) return true;
 
-  for(const p of pipes){
-    if (rectsOverlap(bx,by,bs,bs, p.x,0, PIPE_W,p.topH)) return true;
+  for (const p of pipes) {
+    if (rectsOverlap(bx, by, bs, bs, p.x, 0, PIPE_W, p.topH)) return true;
 
     const bottomY = p.topH + gap;
     const bottomH = (H - FLOOR_H) - bottomY;
-    if (rectsOverlap(bx,by,bs,bs, p.x,bottomY, PIPE_W,bottomH)) return true;
+    if (rectsOverlap(bx, by, bs, bs, p.x, bottomY, PIPE_W, bottomH)) return true;
   }
   return false;
 }
 
 // ===== Loop =====
-function update(){
+function update() {
   const W = window.innerWidth;
   const H = window.innerHeight;
 
@@ -374,10 +401,10 @@ function update(){
 
   if (!running && !dead) {
     drawPlayButton();
-    ctx.fillStyle="rgba(0,0,0,0.35)";
-    ctx.font="800 18px system-ui, sans-serif";
-    ctx.textAlign="center";
-    ctx.fillText("اضغط للبدء", W/2, H*0.72);
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.font = "800 18px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("اضغط للبدء", W / 2, H * 0.72);
     requestAnimationFrame(update);
     return;
   }
@@ -391,20 +418,20 @@ function update(){
   updateDifficulty();
 
   // pipes + score
-  for(const p of pipes){
+  for (const p of pipes) {
     p.x -= speed;
 
     if (!p.passed && p.x + PIPE_W < bird.x - bird.r) {
       p.passed = true;
       score++;
       scoreEl.textContent = String(score);
-      sScore(); // صوت النقطة
+      sScore();
     }
   }
 
   if (pipes.length && pipes[0].x + PIPE_W < -20) pipes.shift();
 
-  const last = pipes[pipes.length-1];
+  const last = pipes[pipes.length - 1];
   if (last && last.x < W + 200) spawnPipe(last.x + PIPE_SPACING);
 
   if (hit()) endGame();
