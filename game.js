@@ -6,20 +6,55 @@ const ctx = canvas.getContext('2d', { alpha: false });
 const startScreen = document.getElementById('startScreen');
 const readyScreen = document.getElementById('readyScreen');
 const gameOverScreen = document.getElementById('gameOverScreen');
-const pauseScreen = document.getElementById('pauseScreen');
+
 const pauseBtn = document.getElementById('pauseBtn');
+const homeBtn  = document.getElementById('homeBtn');
 
 const startBtn = document.getElementById('startBtn');
 const okBtn = document.getElementById('okBtn');
 const shareBtn = document.getElementById('shareBtn');
-const resumeBtn = document.getElementById('resumeBtn');
 
 const finalScoreEl = document.getElementById('finalScore');
 const bestScoreEl = document.getElementById('bestScore');
 const medalEl = document.getElementById('medal');
 
+/* START extras */
+const optionsBtn = document.getElementById('optionsBtn');
+const optionsModal = document.getElementById('optionsModal');
+const optionsCloseBtn = document.getElementById('optionsCloseBtn');
+const soundToggleBtn = document.getElementById('soundToggleBtn');
+const privacyBtn = document.getElementById('privacyBtn');
+
+const privacyModal = document.getElementById('privacyModal');
+const privacyCloseBtn = document.getElementById('privacyCloseBtn');
+
+const registerOpenBtn = document.getElementById('registerOpenBtn');
+const loginOpenBtn = document.getElementById('loginOpenBtn');
+const leaderboardOpenBtn = document.getElementById('leaderboardOpenBtn');
+
+const registerModal = document.getElementById('registerModal');
+const registerCloseBtn = document.getElementById('registerCloseBtn');
+const regUser = document.getElementById('regUser');
+const regPass = document.getElementById('regPass');
+const registerBtn = document.getElementById('registerBtn');
+const registerMsg = document.getElementById('registerMsg');
+
+const loginModal = document.getElementById('loginModal');
+const loginCloseBtn = document.getElementById('loginCloseBtn');
+const loginUser = document.getElementById('loginUser');
+const loginPass = document.getElementById('loginPass');
+const loginBtn = document.getElementById('loginBtn');
+const loginMsg = document.getElementById('loginMsg');
+
+const leaderboardModal = document.getElementById('leaderboardModal');
+const leaderboardCloseBtn = document.getElementById('leaderboardCloseBtn');
+const leaderboardList = document.getElementById('leaderboardList');
+
+const userBadge = document.getElementById('userBadge');
+
 let W = 0, H = 0, DPR = 1;
 
+// منع سحب الصفحة بالجوال (داخل اللعبة)
 document.addEventListener('touchmove', (e) => e.preventDefault(), { passive:false });
 
 function fitCanvas(){
@@ -36,19 +71,24 @@ fitCanvas();
 window.addEventListener('resize', fitCanvas);
 
 // =====================
-// GAME SETTINGS (سلسة ومتوسطة)
+// GAME SETTINGS (أسهل قليل جداً)
 // =====================
 const GRAVITY = 0.42;
 const JUMP_V = -5.7;
 const PIPE_W = 78;
 const PIPE_SPACING = 280;
-const GAP_START = 200;
+const GAP_START = 210;   // أوسع قليل
 const FLOOR_H = 110;
 
-let speed = 3.2;
+let speed = 3.0;         // أبطأ قليل
 let gap = GAP_START;
 
-const bird = { x:0, y:0, vy:0, r:14, rot:0 };
+const bird = {
+  x: 0, y: 0,
+  vy: 0,
+  r: 14,
+  rot: 0,
+};
 
 let pipes = [];
 let score = 0;
@@ -57,26 +97,23 @@ let bestScore = Number(localStorage.getItem('bestScore') || 0);
 let state = 'start'; // start | ready | play | over
 let paused = false;
 
-// shake + flash (إضافة)
+// camera shake (لا تغيير)
 let shakeT = 0;
 let shakePower = 0;
-let flashT = 0;
-
-// score spark (إضافة)
-let sparkT = 0;
-
-// count-up (إضافة)
-let countFrom = 0;
-let countTo = 0;
-let countT = 0;
 
 // =====================
-// AUDIO (أقرب + أنعم)
+// SOUND TOGGLE
+// =====================
+let soundOn = true;
+
+// =====================
+// AUDIO
 // =====================
 let audioCtx = null;
 let masterGain = null;
 
 function initAudio(){
+  if (!soundOn) return;
   if (!audioCtx){
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     masterGain = audioCtx.createGain();
@@ -87,6 +124,7 @@ function initAudio(){
 }
 
 function tone(freq, dur, type='square', vol=0.22){
+  if (!soundOn) return;
   if (!audioCtx) return;
   const o = audioCtx.createOscillator();
   const g = audioCtx.createGain();
@@ -104,11 +142,80 @@ function tone(freq, dur, type='square', vol=0.22){
   o.stop(t + dur);
 }
 
-// أصوات أنعم شوي (إضافة تحسين)
-function sStart(){ tone(660, 0.08, 'square', 0.18); tone(880, 0.10, 'square', 0.14); }
-function sFlap(){ tone(760, 0.05, 'square', 0.16); }
-function sScore(){ tone(990, 0.06, 'square', 0.14); tone(1320, 0.06, 'square', 0.10); }
-function sHit(){ tone(220, 0.18, 'sawtooth', 0.20); tone(140, 0.24, 'sawtooth', 0.14); }
+function sStart(){ tone(659, 0.08, 'square', 0.20); tone(880, 0.10, 'square', 0.16); }
+function sFlap(){ tone(740, 0.06, 'square', 0.18); }
+function sScore(){ tone(988, 0.08, 'square', 0.16); tone(1319, 0.08, 'square', 0.10); }
+function sHit(){ tone(220, 0.20, 'sawtooth', 0.22); tone(140, 0.26, 'sawtooth', 0.16); }
+
+// =====================
+// AUTH (LocalStorage) + LEADERBOARD (session only)
+// =====================
+const USERS_KEY = 'fb_users_v1';
+const CURRENT_KEY = 'fb_currentUser_v1';
+
+function loadUsers(){
+  try{
+    const raw = localStorage.getItem(USERS_KEY);
+    const obj = raw ? JSON.parse(raw) : {};
+    return (obj && typeof obj === 'object') ? obj : {};
+  }catch{
+    return {};
+  }
+}
+function saveUsers(users){
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+}
+function setCurrentUser(u){
+  if (u) localStorage.setItem(CURRENT_KEY, u);
+  else localStorage.removeItem(CURRENT_KEY);
+  updateUserBadge();
+}
+function getCurrentUser(){
+  return localStorage.getItem(CURRENT_KEY) || '';
+}
+function updateUserBadge(){
+  const u = getCurrentUser();
+  userBadge.textContent = u ? `مسجل باسم: ${u}` : '';
+}
+
+/* session leaderboard only (بدون تخزين) */
+let leaderboard = []; // {user, score}
+function addToLeaderboard(user, sc){
+  if (!user) return;
+  // خذ أعلى نتيجة لكل يوزر داخل الجلسة
+  const idx = leaderboard.findIndex(x => x.user === user);
+  if (idx >= 0){
+    if (sc > leaderboard[idx].score) leaderboard[idx].score = sc;
+  }else{
+    leaderboard.push({ user, score: sc });
+  }
+  leaderboard.sort((a,b)=> b.score - a.score);
+  if (leaderboard.length > 20) leaderboard.length = 20;
+}
+function renderLeaderboard(){
+  if (!leaderboard.length){
+    leaderboardList.innerHTML = `<div class="lbHint">لا يوجد نتائج بعد.</div>`;
+    return;
+  }
+  leaderboardList.innerHTML = leaderboard.map((it, i) => {
+    const rank = i+1;
+    return `
+      <div class="lbRow">
+        <div class="lbRank">#${rank}</div>
+        <div class="lbUser">${escapeHtml(it.user)}</div>
+        <div class="lbScore">${it.score}</div>
+      </div>
+    `;
+  }).join('');
+}
+function escapeHtml(s){
+  return String(s)
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'","&#039;");
+}
 
 // =====================
 // UI helpers
@@ -117,15 +224,31 @@ function showScreen(which){
   startScreen.classList.remove('show');
   readyScreen.classList.remove('show');
   gameOverScreen.classList.remove('show');
-  pauseScreen.classList.remove('show');
 
   if (which === 'start') startScreen.classList.add('show');
   if (which === 'ready') readyScreen.classList.add('show');
   if (which === 'over') gameOverScreen.classList.add('show');
-  if (which === 'pause') pauseScreen.classList.add('show');
+
+  updateHUDVisibility();
 }
 
-// ميداليات أصعب (كما طلبت)
+function updateHUDVisibility(){
+  const inPlay = (state === 'play');
+  pauseBtn.style.display = inPlay ? 'block' : 'none';
+  homeBtn.style.display  = inPlay ? 'block' : 'none';
+}
+
+function openModal(el){ el.classList.add('show'); }
+function closeModal(el){ el.classList.remove('show'); }
+function closeAllModals(){
+  closeModal(optionsModal);
+  closeModal(privacyModal);
+  closeModal(registerModal);
+  closeModal(loginModal);
+  closeModal(leaderboardModal);
+}
+
+// ✅ ميداليات أصعب + ترتيبك
 function setMedal(s){
   medalEl.className = 'medal none';
   if (s >= 15) medalEl.className = 'medal white';
@@ -133,16 +256,10 @@ function setMedal(s){
   if (s >= 45) medalEl.className = 'medal bronze';
   if (s >= 60) medalEl.className = 'medal gold';
   if (s >= 80) medalEl.className = 'medal platinum';
-
-  // pop animation (إضافة)
-  if (!medalEl.classList.contains('none')){
-    medalEl.classList.add('pop');
-    setTimeout(()=> medalEl.classList.remove('pop'), 260);
-  }
 }
 
 // =====================
-// DIGIT FONT (Pixel-like)
+// DIGIT FONT
 // =====================
 const DIG = {
   '0': ["111","101","101","101","111"],
@@ -161,6 +278,7 @@ function drawDigit(d, x, y, scale, fill, stroke){
   const map = DIG[d];
   if (!map) return 0;
   const px = scale;
+  const w = 3 * px;
 
   ctx.fillStyle = stroke;
   for (let r=0;r<5;r++){
@@ -180,38 +298,30 @@ function drawDigit(d, x, y, scale, fill, stroke){
     }
   }
 
-  return 3 * px;
+  return w;
 }
 
 function drawScoreNumber(numStr, centerX, topY){
   const scale = Math.max(6, Math.floor(W / 70));
-  const gap2 = Math.floor(scale * 0.8);
+  const gapPx = Math.floor(scale * 0.8);
 
   let totalW = 0;
-  for (const ch of numStr) totalW += 3*scale + gap2;
-  totalW -= gap2;
+  for (const ch of numStr){
+    totalW += 3*scale + gapPx;
+  }
+  totalW -= gapPx;
 
   let x = Math.floor(centerX - totalW/2);
   const y = topY;
 
   for (const ch of numStr){
     drawDigit(ch, x, y, scale, '#ffffff', '#111111');
-    x += 3*scale + gap2;
-  }
-
-  // spark (إضافة)
-  if (sparkT > 0){
-    const a = Math.min(1, sparkT/10);
-    ctx.globalAlpha = a;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(centerX + totalW/2 + 8, y + 6, 6, 6);
-    ctx.fillRect(centerX + totalW/2 + 18, y + 16, 4, 4);
-    ctx.globalAlpha = 1;
+    x += 3*scale + gapPx;
   }
 }
 
 // =====================
-// BACKGROUND (ثابت)
+// BACKGROUND (ليل ثابت بدون تدرج)
 // =====================
 const stars = [];
 function initStars(){
@@ -219,7 +329,7 @@ function initStars(){
   for (let i=0;i<60;i++){
     stars.push({
       x: Math.random()*W,
-      y: Math.random()*Math.min(260, H*0.35),
+      y: Math.random()*Math.min(280, H*0.40),
       r: Math.random()<0.8 ? 1 : 2,
       a: 0.6 + Math.random()*0.4
     });
@@ -242,19 +352,12 @@ function drawCloud(cx, cy, s){
   ctx.fill();
 }
 
-// day/night cycle بسيط جدًا (إضافة بدون تخريب)
-// كل 10 نقاط يغمّق/يفتح شوي
 function drawBackground(){
-  const phase = Math.floor(score / 10) % 2; // 0/1
-  const mix = phase ? 0.18 : 0.0;          // درجة بسيطة فقط
-
-  const g = ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0, mix ? "#061320" : "#0a1a2a");
-  g.addColorStop(0.55, mix ? "#0b2f46" : "#0f3d5a");
-  g.addColorStop(1, "#77c7e9");
-  ctx.fillStyle = g;
+  // لون ثابت (بدون تدرج)
+  ctx.fillStyle = "#071321";
   ctx.fillRect(0,0,W,H);
 
+  // stars
   ctx.fillStyle = '#fff';
   for (const s of stars){
     ctx.globalAlpha = s.a;
@@ -262,10 +365,12 @@ function drawBackground(){
   }
   ctx.globalAlpha = 1;
 
+  // clouds
   for (const c of clouds){
     drawCloud(W*c.x, H*c.y, c.s);
   }
 
+  // city silhouette
   const cityY = H - FLOOR_H - 150;
   ctx.fillStyle = "rgba(12, 25, 35, 0.25)";
   for (let i=0;i<18;i++){
@@ -275,6 +380,7 @@ function drawBackground(){
     ctx.fillRect(x, cityY - bh, bw, bh);
   }
 
+  // ground
   const groundY = H - FLOOR_H;
   ctx.fillStyle="#d8d19a";
   ctx.fillRect(0, groundY, W, FLOOR_H);
@@ -351,7 +457,7 @@ function drawPipes(){
 // =====================
 function drawBird(){
   const targetRot = Math.max(-0.45, Math.min(1.2, bird.vy * 0.06));
-  bird.rot += (targetRot - bird.rot) * 0.13;
+  bird.rot += (targetRot - bird.rot) * 0.15;
 
   ctx.save();
   ctx.translate(bird.x, bird.y);
@@ -396,7 +502,7 @@ function reset(){
 
   pipes = [];
   score = 0;
-  speed = 3.2;
+  speed = 3.0;
   gap = GAP_START;
 
   spawnPipe(W + 200);
@@ -404,14 +510,9 @@ function reset(){
 
   shakeT = 0;
   shakePower = 0;
-  flashT = 0;
-  sparkT = 0;
-
   paused = false;
-  pauseBtn.textContent = 'II';
 
-  // reset count-up
-  countFrom = 0; countTo = 0; countT = 0;
+  pauseBtn.textContent = 'II';
 }
 
 function rectsOverlap(ax,ay,aw,ah,bx,by,bw,bh){
@@ -437,10 +538,26 @@ function hitTest(){
   return false;
 }
 
+/*
+  صعوبة: نفس الأسلوب القديم لكن أسهل قليل جداً
+  - تزيد ببطء
+  - بعد سكور 80 تبدأ تصعب زيادة إضافية تدريجية ناعمة
+*/
 function updateDifficulty(){
-  const lvl = Math.floor(score / 6);
-  speed = 3.2 + lvl * 0.25;
-  gap = GAP_START - Math.min(lvl * 8, 60);
+  // مستوى بطيء جداً
+  const lvl = Math.floor(score / 10); // كان 6 (أسرع)، صار 10 (أبطأ)
+  speed = 3.0 + lvl * 0.12;          // كان 0.25، صار 0.12 (أبطأ بكثير)
+  gap = GAP_START - Math.min(lvl * 4, 40); // كان 8 و60، صار 4 و40 (تضييق أبطأ)
+
+  // بعد 80: صعوبة إضافية ناعمة جداً
+  if (score >= 80){
+    const extra = Math.floor((score - 80) / 12); // كل 12 نقطة يزيد شوي
+    speed += extra * 0.06;                       // زيادة بسيطة
+    gap -= Math.min(extra * 2, 20);              // تضييق بسيط
+  }
+
+  // حدود أمان
+  gap = Math.max(150, gap);
 }
 
 // =====================
@@ -470,36 +587,6 @@ function toPlay(){
   sStart();
 }
 
-function toPause(){
-  if (state !== 'play') return;
-  paused = true;
-  showScreen('pause');
-  pauseBtn.textContent = '▶';
-}
-
-function toResume(){
-  if (state !== 'play') return;
-  paused = false;
-  showScreen(null);
-  pauseBtn.textContent = 'II';
-}
-
-function startCountUp(n){
-  countFrom = 0;
-  countTo = n;
-  countT = 0;
-  finalScoreEl.textContent = "0";
-}
-
-function tickCountUp(){
-  if (countFrom >= countTo) return;
-  // سرعة عد مناسبة
-  countT++;
-  const step = Math.max(1, Math.floor(countTo / 25));
-  countFrom = Math.min(countTo, countFrom + step);
-  finalScoreEl.textContent = String(countFrom);
-}
-
 function toOver(){
   state = 'over';
   showScreen('over');
@@ -509,42 +596,48 @@ function toOver(){
     localStorage.setItem('bestScore', String(bestScore));
   }
 
+  finalScoreEl.textContent = String(score);
   bestScoreEl.textContent = String(bestScore);
 
   setMedal(score);
 
-  // Count-up (إضافة)
-  startCountUp(score);
+  // leaderboard (session only) إذا مسجل
+  addToLeaderboard(getCurrentUser(), score);
 
-  // flash + shake + hit sound (إضافة)
+  // shake + hit sound (بدون تغيير)
   shakeT = 18;
   shakePower = 10;
-  flashT = 10;
   sHit();
 }
 
+// HUD buttons
 pauseBtn.addEventListener('click', (e)=>{
   e.preventDefault();
   if (state !== 'play') return;
-  initAudio();
-  if (!paused) toPause();
-  else toResume();
+  paused = !paused;
+  pauseBtn.textContent = paused ? '▶' : 'II';
 });
 
-resumeBtn.addEventListener('click', (e)=>{
+homeBtn.addEventListener('click', (e)=>{
   e.preventDefault();
-  initAudio();
-  toResume();
+  if (state !== 'play') return;
+  // رجوع للرئيسية من اللعب فقط
+  paused = false;
+  reset();
+  toStart();
 });
 
+// Start / OK / Share
 startBtn.addEventListener('click', (e)=>{
   e.preventDefault();
+  closeAllModals();
   reset();
   toReady();
 });
 
 okBtn.addEventListener('click', (e)=>{
   e.preventDefault();
+  closeAllModals();
   reset();
   toReady();
 });
@@ -552,28 +645,22 @@ okBtn.addEventListener('click', (e)=>{
 shareBtn.addEventListener('click', async (e)=>{
   e.preventDefault();
   const text = `سجلت ${score} في اللعبة!`;
-
-  try{
-    // حاول مشاركة صورة
-    if (navigator.share && canvas.toBlob){
-      const blob = await new Promise(res => canvas.toBlob(res, 'image/png', 0.95));
-      if (blob){
-        const file = new File([blob], 'score.png', { type:'image/png' });
-        // بعض الأجهزة لازم canShare
-        if (navigator.canShare && navigator.canShare({ files:[file] })){
-          await navigator.share({ files:[file], text });
-          return;
-        }
-      }
-    }
-  }catch{}
-
   try{
     if (navigator.share) await navigator.share({ text });
   }catch{}
 });
 
+// Tap / click
 window.addEventListener('pointerdown', (e)=>{
+  // إذا فيه مودال مفتوح لا تلعب
+  if (optionsModal.classList.contains('show') ||
+      privacyModal.classList.contains('show') ||
+      registerModal.classList.contains('show') ||
+      loginModal.classList.contains('show') ||
+      leaderboardModal.classList.contains('show')){
+    return;
+  }
+
   initAudio();
 
   if (state === 'ready'){
@@ -587,6 +674,7 @@ window.addEventListener('pointerdown', (e)=>{
   }
 }, { passive:false });
 
+// keyboard
 window.addEventListener('keydown', (e)=>{
   if (e.code === 'Space' || e.code === 'ArrowUp'){
     if (state === 'ready'){ toPlay(); flap(); }
@@ -594,11 +682,138 @@ window.addEventListener('keydown', (e)=>{
   }
   if (e.code === 'KeyP'){
     if (state === 'play'){
-      initAudio();
-      if (!paused) toPause();
-      else toResume();
+      paused = !paused;
+      pauseBtn.textContent = paused ? '▶' : 'II';
     }
   }
+});
+
+// =====================
+// MODALS EVENTS (فقط الرئيسية للخيارات)
+// =====================
+optionsBtn.addEventListener('click', (e)=>{
+  e.preventDefault();
+  if (state !== 'start') return; // فقط الرئيسية
+  openModal(optionsModal);
+});
+
+optionsCloseBtn.addEventListener('click', (e)=>{
+  e.preventDefault();
+  closeModal(optionsModal);
+});
+
+privacyBtn.addEventListener('click', (e)=>{
+  e.preventDefault();
+  closeModal(optionsModal);
+  openModal(privacyModal);
+});
+
+privacyCloseBtn.addEventListener('click', (e)=>{
+  e.preventDefault();
+  closeModal(privacyModal);
+});
+
+soundToggleBtn.addEventListener('click', (e)=>{
+  e.preventDefault();
+  soundOn = !soundOn;
+  soundToggleBtn.textContent = soundOn ? '🔊 الصوت: تشغيل' : '🔇 الصوت: إيقاف';
+  if (soundOn){
+    initAudio();
+    sStart();
+  }
+});
+
+registerOpenBtn.addEventListener('click', (e)=>{
+  e.preventDefault();
+  if (state !== 'start') return;
+  registerMsg.textContent = '';
+  regUser.value = '';
+  regPass.value = '';
+  openModal(registerModal);
+});
+
+registerCloseBtn.addEventListener('click', (e)=>{
+  e.preventDefault();
+  closeModal(registerModal);
+});
+
+loginOpenBtn.addEventListener('click', (e)=>{
+  e.preventDefault();
+  if (state !== 'start') return;
+  loginMsg.textContent = '';
+  loginUser.value = '';
+  loginPass.value = '';
+  openModal(loginModal);
+});
+
+loginCloseBtn.addEventListener('click', (e)=>{
+  e.preventDefault();
+  closeModal(loginModal);
+});
+
+leaderboardOpenBtn.addEventListener('click', (e)=>{
+  e.preventDefault();
+  if (state !== 'start') return;
+  renderLeaderboard();
+  openModal(leaderboardModal);
+});
+
+leaderboardCloseBtn.addEventListener('click', (e)=>{
+  e.preventDefault();
+  closeModal(leaderboardModal);
+});
+
+// Register logic
+function validUsername(u){
+  return typeof u === 'string' && u.trim().length >= 3;
+}
+function validPassword(p){
+  return typeof p === 'string' && p.length >= 6;
+}
+
+registerBtn.addEventListener('click', (e)=>{
+  e.preventDefault();
+  const u = (regUser.value || '').trim();
+  const p = (regPass.value || '');
+
+  if (!validUsername(u)){
+    registerMsg.textContent = 'اسم المستخدم لازم 3 أحرف أو أكثر.';
+    return;
+  }
+  if (!validPassword(p)){
+    registerMsg.textContent = 'كلمة المرور لازم 6 أحرف/أرقام أو أكثر.';
+    return;
+  }
+
+  const users = loadUsers();
+  if (users[u]){
+    registerMsg.textContent = 'اسم المستخدم مستخدم مسبقًا.';
+    return;
+  }
+
+  users[u] = { pass: p };
+  saveUsers(users);
+  setCurrentUser(u);
+
+  registerMsg.textContent = 'تم التسجيل ✅';
+  setTimeout(()=> closeModal(registerModal), 500);
+});
+
+// Login logic
+loginBtn.addEventListener('click', (e)=>{
+  e.preventDefault();
+  const u = (loginUser.value || '').trim();
+  const p = (loginPass.value || '');
+
+  const users = loadUsers();
+  if (!users[u] || users[u].pass !== p){
+    loginMsg.textContent = 'بيانات الدخول غير صحيحة.';
+    return;
+  }
+
+  setCurrentUser(u);
+  loginMsg.textContent = 'تم الدخول ✅';
+  setTimeout(()=> closeModal(loginModal), 500);
 });
 
 // =====================
@@ -620,35 +835,16 @@ function step(){
   drawPipes();
   drawBird();
 
-  // score
   if (state === 'play' || state === 'over'){
     drawScoreNumber(String(score), W/2, Math.max(22, H*0.06));
   }
+
   if (state === 'ready'){
     drawScoreNumber("0", W/2, Math.max(22, H*0.06));
   }
 
-  // flash overlay (إضافة)
-  if (flashT > 0){
-    const a = Math.min(0.35, flashT/12);
-    ctx.globalAlpha = a;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0,0,W,H);
-    ctx.globalAlpha = 1;
-    flashT--;
-  }
-
   ctx.restore();
 
-  // count-up in Game Over (إضافة)
-  if (state === 'over'){
-    tickCountUp();
-  }
-
-  // spark fade
-  if (sparkT > 0) sparkT--;
-
-  // update
   if (state === 'play' && !paused){
     bird.vy += GRAVITY;
     bird.y += bird.vy;
@@ -661,7 +857,6 @@ function step(){
       if (!p.passed && p.x + PIPE_W < bird.x - bird.r){
         p.passed = true;
         score++;
-        sparkT = 10;   // spark on score (إضافة)
         sScore();
       }
     }
@@ -681,6 +876,8 @@ function step(){
 
 // start
 bestScoreEl.textContent = String(bestScore);
+soundToggleBtn.textContent = soundOn ? '🔊 الصوت: تشغيل' : '🔇 الصوت: إيقاف';
+updateUserBadge();
 reset();
 toStart();
 step();
