@@ -1,69 +1,63 @@
 <!doctype html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Flappy Style</title>
+  <title>Flappy Bird</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
-  <canvas id="gameCanvas"></canvas>
+  <div class="wrap">
+    <canvas id="game" width="360" height="640" aria-label="Flappy Bird Game"></canvas>
 
-  <!-- UI -->
-  <div id="ui">
-    <button id="pauseBtn" class="pause" aria-label="Pause">II</button>
+    <!-- زر باوز صغير (ما طلبته في آخر رسالة، لذلك مخفي) -->
+    <!-- <button id="pauseBtn" class="pause" aria-label="Pause">II</button> -->
 
-    <!-- START -->
-    <div id="startScreen" class="screen show">
-      <div class="logoWrap">
-        <div class="pixelTitle">FLAPPY BIRD</div>
-        <div class="pixelSubtitle">START</div>
+    <!-- شاشة البداية -->
+    <div id="startOverlay" class="overlay">
+      <div class="panel">
+        <!-- الطير فوق اسم اللعبة -->
+        <div id="startBird" aria-hidden="true"></div>
+
+        <div class="title">FLAPPY BIRD</div>
+
+        <!-- زر START فقط -->
+        <button id="startBtn" class="btn primary">START</button>
       </div>
-      <button id="startBtn" class="btn">START</button>
-      <div class="hint">اضغط START ثم TAP للّعب</div>
     </div>
 
-    <!-- GET READY -->
-    <div id="readyScreen" class="screen">
-      <div class="getReady">GET READY</div>
-      <div class="tapWrap">
-        <div class="tapArrow">↑</div>
-        <div class="tapText">TAP</div>
-      </div>
-      <div class="hint">اضغط على الشاشة للقفز</div>
-    </div>
-
-    <!-- GAME OVER -->
-    <div id="gameOverScreen" class="screen">
-      <div class="gameOver">GAME OVER</div>
-
-      <div class="board">
-        <div class="medalBox">
-          <div id="medal" class="medal none" title="Medal"></div>
-        </div>
-
-        <div class="stats">
-          <div class="row">
-            <div class="k">SCORE</div>
-            <div class="v" id="finalScore">0</div>
-          </div>
-          <div class="row">
-            <div class="k">BEST</div>
-            <div class="v" id="bestScore">0</div>
-          </div>
+    <!-- شاشة TAP (لا تعدل عليها شي — Get Ready + Tap) -->
+    <div id="tapOverlay" class="overlay" style="display:none;">
+      <div class="panel">
+        <div class="getready">GET READY</div>
+        <div class="tapHint">
+          <div class="arrow">↑</div>
+          <div class="tap">TAP</div>
         </div>
       </div>
-
-      <div class="actions">
-        <button id="okBtn" class="btn">OK</button>
-        <button id="shareBtn" class="btn ghost">SHARE</button>
-      </div>
-
-      <div class="hint">اضغط OK لإعادة اللعب</div>
     </div>
 
-    <div id="audioHint" class="audioHint">🔊 إذا ما اشتغل الصوت: اضغط START ثم TAP داخل اللعبة</div>
+    <!-- شاشة الخسارة -->
+    <div id="gameOverOverlay" class="overlay" style="display:none;">
+      <div class="panel over-panel">
+        <div class="gameover">GAME OVER</div>
+
+        <div class="scoreboard">
+          <div id="medalSlot" class="medal-slot"></div>
+
+          <div class="score-lines" dir="ltr">
+            <div class="line"><span>SCORE</span><span id="finalScore">0</span></div>
+            <div class="line"><span>BEST</span><span id="bestScore">0</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="okBtn" class="btn primary">OK</button>
+          <button id="shareBtn" class="btn">SHARE</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="game.js"></script>
